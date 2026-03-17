@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool Crib — Control de Consumibles v2</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d0f12;
+  --bg2: #13171d;
+  --bg3: #1a1f28;
+  --bg4: #222836;
+  --border: #2a3040;
+  --border2: #3a4558;
+  --text: #e8edf5;
+  --text2: #8a95a8;
+  --text3: #556070;
+  --accent: #3d8ef0;
+  --accent2: #1a5cbf;
+  --green: #2ecc71;
+  --green-bg: #0d2a1a;
+  --green-border: #1a5a30;
+  --amber: #f5a623;
+  --amber-bg: #2a1e08;
+  --amber-border: #5a3e10;
+  --red: #e74c3c;
+  --red-bg: #2a0e0e;
+  --red-border: #5a1a1a;
+  --blue-bg: #0d1e35;
+  --blue-border: #1a3a60;
+  --purple: #9b59b6;
+  --purple-bg: #1a0d2a;
+  --purple-border: #3a1a5a;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+
+/* ── LOGIN SCREEN ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999}
+.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:40px 36px;width:380px;max-width:95vw}
+.login-logo{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent);margin-bottom:4px}
+.login-logo span{color:var(--text2);font-weight:400}
+.login-sub{font-size:12px;color:var(--text3);margin-bottom:28px;font-family:var(--mono)}
+.login-field{margin-bottom:14px}
+.login-field label{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:5px}
+.login-field input, .login-field select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;outline:none;transition:border .15s}
+.login-field input:focus, .login-field select:focus{border-color:var(--accent)}
+.login-field select option{background:var(--bg3)}
+.login-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:4px;padding:11px;font-size:14px;font-weight:500;cursor:pointer;font-family:var(--sans);margin-top:8px;transition:opacity .15s}
+.login-btn:hover{opacity:.85}
+.login-err{color:var(--red);font-size:12px;font-family:var(--mono);margin-top:8px;display:none}
+.login-users-hint{margin-top:20px;padding:12px;background:var(--bg3);border-radius:4px;border:1px solid var(--border)}
+.login-users-hint p{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.login-users-hint table{width:100%;font-family:var(--mono);font-size:11px;color:var(--text2)}
+.login-users-hint td{padding:2px 6px}
+.login-users-hint td:first-child{color:var(--text3)}
+
+/* ── LAYOUT ── */
+.shell{display:flex;flex-direction:column;min-height:100vh}
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:20px;height:56px;position:sticky;top:0;z-index:100}
+.logo{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--accent);letter-spacing:.02em}
+.logo span{color:var(--text2);font-weight:400}
+.header-badges{display:flex;gap:8px;margin-left:auto;align-items:center}
+.hbadge{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:3px;font-weight:500}
+.hbadge.urgent{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.hbadge.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.hbadge.time{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.user-badge{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:3px;background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border);cursor:default}
+.logout-btn{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:3px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.logout-btn:hover{color:var(--red);border-color:var(--red-border)}
+
+.main{display:flex;flex:1}
+.sidebar{width:200px;background:var(--bg2);border-right:1px solid var(--border);padding:16px 0;flex-shrink:0}
+.nav-label{font-family:var(--mono);font-size:10px;color:var(--text3);padding:0 16px 8px;letter-spacing:.1em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;color:var(--text2);font-size:13px;border-left:2px solid transparent;transition:all .12s}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--bg3);color:var(--accent);border-left-color:var(--accent)}
+.nav-item.admin-only{display:none}
+.nav-icon{width:18px;text-align:center;font-size:14px;flex-shrink:0}
+.nav-divider{height:1px;background:var(--border);margin:8px 16px}
+
+.content{flex:1;padding:24px;overflow-y:auto;max-width:1100px}
+
+/* ── PANELS ── */
+.panel{display:none}
+.panel.active{display:block}
+
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.card-title{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase}
+.card-icon{font-size:16px}
+
+/* ── FORMS ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid.three{grid-template-columns:1fr 1fr 1fr}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field.full{grid-column:1/-1}
+label{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:14px;padding:9px 12px;outline:none;transition:border .15s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--bg3)}
+textarea{resize:vertical;min-height:72px;font-size:13px}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+
+/* ── STOCK BOX ── */
+.stock-box{padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;margin-top:4px}
+.stock-box.ok{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green)}
+.stock-box.warn{background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber)}
+.stock-box.danger{background:var(--red-bg);border:1px solid var(--red-border);color:var(--red)}
+
+/* ── BUTTONS ── */
+.btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+button{font-family:var(--sans);font-size:13px;font-weight:500;padding:9px 20px;border-radius:4px;border:none;cursor:pointer;transition:opacity .15s;letter-spacing:.01em}
+button:hover{opacity:.85}
+button:active{opacity:.7}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-success{background:#1a7a3e;color:#fff;border:1px solid #2ecc71}
+.btn-danger{background:#7a1a1a;color:#fff;border:1px solid var(--red)}
+.btn-warn{background:#7a4a0a;color:#fff;border:1px solid var(--amber)}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-edit{background:var(--blue-bg);color:var(--accent);border:1px solid var(--blue-border)}
+.btn-del{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.btn-purple{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border)}
+
+/* ── TABLES ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.mono{font-family:var(--mono);font-size:12px}
+
+/* ── BADGES ── */
+.badge{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;letter-spacing:.04em}
+.badge-ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge-low{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.badge-urgent{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.badge-sal{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.badge-ent{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge-cnt{background:var(--blue-bg);color:var(--accent);border:1px solid var(--blue-border)}
+.badge-rep{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.badge-adm{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border)}
+.role-admin{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border)}
+.role-encargado{background:var(--blue-bg);color:var(--accent);border:1px solid var(--blue-border)}
+.role-operario{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+
+/* ── ALERTS ── */
+.alert-banner{padding:10px 14px;border-radius:4px;font-size:13px;margin-bottom:12px;display:flex;gap:8px;align-items:flex-start}
+.alert-banner.warn{background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber)}
+.alert-banner.info{background:var(--blue-bg);border:1px solid var(--blue-border);color:var(--accent)}
+.alert-banner.danger{background:var(--red-bg);border:1px solid var(--red-border);color:var(--red)}
+
+/* ── DASHBOARD KPIs ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px}
+.kpi-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.kpi-val{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--text);line-height:1}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.kpi.red .kpi-val{color:var(--red)}
+.kpi.green .kpi-val{color:var(--green)}
+.kpi.amber .kpi-val{color:var(--amber)}
+
+/* ── CHART ── */
+.chart-container{position:relative;height:220px;width:100%}
+
+/* ── INVENTORY INPUT ── */
+.inv-input{width:80px;text-align:right;padding:5px 8px;font-family:var(--mono);font-size:12px}
+.diff-pos{color:var(--green);font-family:var(--mono);font-size:12px}
+.diff-neg{color:var(--red);font-family:var(--mono);font-size:12px}
+.diff-zero{color:var(--text3);font-family:var(--mono);font-size:12px}
+
+/* ── LOG ── */
+.log-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.log-row:last-child{border-bottom:none}
+.log-time{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:42px;margin-top:1px}
+.log-user{font-family:var(--mono);font-size:10px;color:var(--purple);min-width:80px;margin-top:2px}
+.log-body{flex:1;font-size:13px;color:var(--text2);line-height:1.5}
+.log-body strong{color:var(--text)}
+
+/* ── REPORT ── */
+.report-box{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:14px;font-family:var(--mono);font-size:12px;color:var(--text2);white-space:pre-wrap;margin-top:12px;line-height:1.7}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;padding:11px 18px;border-radius:4px;font-family:var(--mono);font-size:12px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9998;border:1px solid}
+#toast.show{opacity:1}
+#toast.ok{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+#toast.err{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+
+/* ── SECTION TITLE ── */
+.section-title{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── EXPORT ROW ── */
+.export-row{display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* ── USERS ADMIN TABLE ── */
+.users-grid{display:grid;gap:8px}
+.user-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border-radius:4px;border:1px solid var(--border)}
+.user-name{font-weight:500;flex:1}
+.user-role-badge{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{flex:1;min-width:140px;max-width:240px}
+
+/* ── ACCESS DENIED ── */
+.access-denied{text-align:center;padding:60px 20px;color:var(--text3);font-family:var(--mono);font-size:13px}
+.access-denied .icon{font-size:40px;margin-bottom:16px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  .sidebar{display:none}
+  .form-grid{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .content{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">TOOL<span>CRIB</span> / <span>Control v2</span></div>
+    <div class="login-sub">// Inicia sesión para continuar</div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <select id="l-user">
+        <option value="">— Selecciona usuario —</option>
+      </select>
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input id="l-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-err" id="l-err">Contraseña incorrecta</div>
+    <button class="login-btn" onclick="doLogin()">Ingresar →</button>
+    <div class="login-users-hint">
+      <p>Usuarios de demostración</p>
+      <table>
+        <tr><td>admin</td><td>admin123</td><td><span class="badge badge-adm">Admin</span></td></tr>
+        <tr><td>encargado</td><td>enc456</td><td><span class="badge badge-cnt">Encargado</span></td></tr>
+        <tr><td>operario1</td><td>op789</td><td><span class="badge role-operario">Operario</span></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ APP SHELL ══════════════ -->
+<div class="shell" id="app" style="display:none">
+
+<header>
+  <div class="logo">TOOL<span>CRIB</span> / <span>Control de Consumibles</span></div>
+  <div class="header-badges">
+    <span class="hbadge urgent" id="h-urgent">— urgentes</span>
+    <span class="hbadge ok" id="h-ok">— OK</span>
+    <span class="hbadge time" id="h-time"></span>
+    <span class="user-badge" id="h-user">—</span>
+    <button class="logout-btn" onclick="doLogout()">✕ Salir</button>
+  </div>
+</header>
+
+<div class="main">
+<nav class="sidebar">
+  <div class="nav-label">Operaciones</div>
+  <div class="nav-item active" onclick="nav('dashboard')" id="nav-dashboard"><span class="nav-icon">⬛</span> Dashboard</div>
+  <div class="nav-item" onclick="nav('salida')" id="nav-salida"><span class="nav-icon">↑</span> Salida</div>
+  <div class="nav-item" onclick="nav('entrada')" id="nav-entrada"><span class="nav-icon">↓</span> Entrada</div>
+  <div class="nav-item" onclick="nav('inventario')" id="nav-inventario"><span class="nav-icon">≡</span> Conteo</div>
+  <div class="nav-divider"></div>
+  <div class="nav-label">Consultas</div>
+  <div class="nav-item" onclick="nav('stock')" id="nav-stock"><span class="nav-icon">◻</span> Ver stock</div>
+  <div class="nav-item" onclick="nav('historial')" id="nav-historial"><span class="nav-icon">◷</span> Historial</div>
+  <div class="nav-divider"></div>
+  <div class="nav-label">Reportes</div>
+  <div class="nav-item" onclick="nav('reporte')" id="nav-reporte"><span class="nav-icon">!</span> Reportar</div>
+  <div class="nav-divider"></div>
+  <div class="nav-label">Administración</div>
+  <div class="nav-item admin-only" onclick="nav('catalogo')" id="nav-catalogo"><span class="nav-icon">🗂</span> Catálogo</div>
+  <div class="nav-item admin-only" onclick="nav('usuarios')" id="nav-usuarios"><span class="nav-icon">👤</span> Usuarios</div>
+</nav>
+
+<div class="content">
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="p-dashboard" class="panel active">
+  <div class="section-title">Dashboard</div>
+  <div class="kpi-grid" id="kpi-grid"></div>
+  <div id="dash-alerts"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card">
+      <div class="card-header"><span class="card-icon">📊</span><span class="card-title">Movimientos (últimos 7 días)</span></div>
+      <div class="chart-container"><canvas id="chart-mov"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-icon">🥧</span><span class="card-title">Stock por categoría</span></div>
+      <div class="chart-container"><canvas id="chart-cat"></canvas></div>
+    </div>
+  </div>
+  <div class="section-title">Últimos movimientos</div>
+  <div class="card" style="padding:0 20px">
+    <div id="dash-log" style="padding:4px 0"><div style="color:var(--text3);font-size:13px;padding:16px 0">Sin movimientos aún.</div></div>
+  </div>
+</div>
+
+<!-- ═══ SALIDA ═══ -->
+<div id="p-salida" class="panel">
+  <div class="section-title">Registrar salida de material</div>
+  <div class="card">
+    <div class="card-header"><span class="card-icon">↑</span><span class="card-title">Datos de la salida</span></div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Operario que recibe *</label>
+        <input id="s-op" type="text" placeholder="Nombre completo">
+      </div>
+      <div class="form-field">
+        <label>Línea / Área *</label>
+        <select id="s-linea">
+          <option value="">— Selecciona —</option>
+          <option>Línea 1</option><option>Línea 2</option><option>Línea 3</option>
+          <option>Mantenimiento</option><option>Almacén</option><option>Calidad</option>
+          <option>Producción A</option><option>Producción B</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Consumible *</label>
+        <select id="s-cons" onchange="checkStock()"><option value="">— Selecciona —</option></select>
+      </div>
+      <div class="form-field">
+        <label>Cantidad *</label>
+        <input id="s-qty" type="number" min="1" placeholder="0" oninput="checkStock()">
+      </div>
+    </div>
+    <div id="s-info" style="display:none;margin-top:8px"></div>
+    <div class="form-grid" style="margin-top:12px">
+      <div class="form-field full">
+        <label>Orden de trabajo / referencia (opcional)</label>
+        <input id="s-ot" type="text" placeholder="Ej: OT-2026-441">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-danger" onclick="doSalida()">↑ Registrar salida</button>
+      <button class="btn-ghost" onclick="clearSalida()">Limpiar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ENTRADA ═══ -->
+<div id="p-entrada" class="panel">
+  <div class="section-title">Registrar entrada de proveedor</div>
+  <div class="card">
+    <div class="card-header"><span class="card-icon">↓</span><span class="card-title">Datos de la entrada</span></div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Proveedor *</label>
+        <input id="e-prov" type="text" placeholder="Nombre del proveedor">
+      </div>
+      <div class="form-field">
+        <label>N° Remisión / Factura</label>
+        <input id="e-rem" type="text" placeholder="Ej: REM-001234">
+      </div>
+      <div class="form-field">
+        <label>Consumible *</label>
+        <select id="e-cons"><option value="">— Selecciona —</option></select>
+      </div>
+      <div class="form-field">
+        <label>Cantidad recibida *</label>
+        <input id="e-qty" type="number" min="1" placeholder="0">
+      </div>
+      <div class="form-field full">
+        <label>Observaciones (daños, faltantes, discrepancias)</label>
+        <textarea id="e-obs" placeholder="Sin observaciones..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-success" onclick="doEntrada()">↓ Confirmar entrada</button>
+      <button class="btn-ghost" onclick="clearEntrada()">Limpiar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONTEO ═══ -->
+<div id="p-inventario" class="panel">
+  <div class="section-title">Conteo físico de inventario</div>
+  <div class="alert-banner warn"><span>⚠</span><span>Captura el conteo real de cada consumible. Las diferencias se resaltan automáticamente. Presiona "Guardar conteo" cuando termines.</span></div>
+  <div class="card" style="padding:0">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>N° Parte</th><th>Descripción</th><th>Unidad</th><th>Stock sistema</th><th>Conteo real</th><th>Diferencia</th></tr></thead>
+        <tbody id="inv-body"></tbody>
+      </table>
+    </div>
+    <div style="padding:16px;border-top:1px solid var(--border);display:flex;gap:10px">
+      <button class="btn-primary" onclick="saveInventario()">Guardar conteo</button>
+      <button class="btn-ghost" onclick="renderInventario()">Resetear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STOCK ═══ -->
+<div id="p-stock" class="panel">
+  <div class="section-title">Stock actual</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div class="filter-bar" style="margin:0">
+      <input id="stock-search" type="text" placeholder="Buscar..." oninput="renderStock()" style="max-width:200px">
+      <select id="stock-cat" onchange="renderStock()">
+        <option value="">Todas las categorías</option>
+      </select>
+      <select id="stock-status" onchange="renderStock()">
+        <option value="">Todos los status</option>
+        <option value="urgent">Urgente</option>
+        <option value="low">Bajo</option>
+        <option value="ok">OK</option>
+      </select>
+    </div>
+    <button class="btn-ghost btn-sm" onclick="exportCSV()">↓ Exportar CSV</button>
+  </div>
+  <div class="card" style="padding:0">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>N° Parte</th><th>Descripción</th><th>Categoría</th><th>Stock</th><th>Seg.</th><th>Reorden</th><th>Proveedor</th><th>Status</th></tr></thead>
+        <tbody id="stock-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HISTORIAL ═══ -->
+<div id="p-historial" class="panel">
+  <div class="section-title">Historial de movimientos</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div class="filter-bar" style="margin:0">
+      <select id="hist-tipo" onchange="renderLogs('hist-body')">
+        <option value="">Todos los tipos</option>
+        <option value="SAL">Salidas</option>
+        <option value="ENT">Entradas</option>
+        <option value="CNT">Conteos</option>
+        <option value="REP">Reportes</option>
+      </select>
+    </div>
+    <button class="btn-ghost btn-sm" onclick="exportLog()">↓ Exportar historial</button>
+  </div>
+  <div class="card" style="padding:8px 20px">
+    <div id="hist-body"><div style="color:var(--text3);padding:16px 0;font-size:13px">Sin movimientos registrados.</div></div>
+  </div>
+</div>
+
+<!-- ═══ REPORTE ═══ -->
+<div id="p-reporte" class="panel">
+  <div class="section-title">Reportar problema a ingeniería</div>
+  <div class="card">
+    <div class="card-header"><span class="card-icon">!</span><span class="card-title">Datos del reporte</span></div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Tipo de problema *</label>
+        <select id="r-tipo">
+          <option>Material dañado o defectuoso</option>
+          <option>Falta material urgente</option>
+          <option>Problema con proveedor</option>
+          <option>Consumible incorrecto entregado</option>
+          <option>Falla en equipo de tool crib</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Prioridad *</label>
+        <select id="r-prio">
+          <option>Normal</option>
+          <option>Alta</option>
+          <option>Urgente — requiere acción inmediata</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Consumible involucrado</label>
+        <select id="r-cons"><option value="">— No aplica —</option></select>
+      </div>
+      <div class="form-field">
+        <label>Tu nombre *</label>
+        <input id="r-nombre" type="text" placeholder="Operador tool crib">
+      </div>
+      <div class="form-field full">
+        <label>Descripción del problema *</label>
+        <textarea id="r-desc" placeholder="Describe qué pasó, qué encontraste, qué necesita atención..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-warn" onclick="doReporte()">! Generar reporte</button>
+      <button class="btn-ghost" onclick="clearReporte()">Limpiar</button>
+    </div>
+    <div id="r-preview" style="display:none">
+      <div style="margin-top:16px;font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Vista previa del reporte</div>
+      <div class="report-box" id="r-box"></div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn-ghost" onclick="copyReport()">Copiar reporte</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CATÁLOGO (Admin) ═══ -->
+<div id="p-catalogo" class="panel">
+  <div class="section-title">Catálogo de consumibles</div>
+  <div id="cat-access-check"></div>
+  <div id="cat-content" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn-primary btn-sm" onclick="openModalNew()">+ Nuevo consumible</button>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>N° Parte</th><th>Descripción</th><th>Categoría</th><th>Unidad</th><th>Stock</th><th>Seg.</th><th>Reorden</th><th>Proveedor</th><th>Lead</th><th>Costo</th><th>Acciones</th></tr></thead>
+          <tbody id="cat-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ USUARIOS (Admin) ═══ -->
+<div id="p-usuarios" class="panel">
+  <div class="section-title">Gestión de usuarios</div>
+  <div id="usr-access-check"></div>
+  <div id="usr-content" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn-primary btn-sm" onclick="openModalUser()">+ Nuevo usuario</button>
+    </div>
+    <div id="users-list"></div>
+  </div>
+</div>
+
+</div><!-- end content -->
+</div><!-- end main -->
+</div><!-- end shell -->
+
+<!-- ══════════ MODAL CONSUMIBLE ══════════ -->
+<div class="modal-overlay" id="modal-cons">
+  <div class="modal">
+    <div class="modal-title" id="modal-cons-title">➕ Nuevo consumible</div>
+    <div class="form-grid three">
+      <div class="form-field"><label>N° Parte *</label><input id="m-id" placeholder="CONS-###"></div>
+      <div class="form-field"><label>Categoría *</label>
+        <select id="m-cat">
+          <option>Grapas</option><option>Pegamentos</option><option>Flejes</option>
+          <option>Tapes</option><option>Tinta</option><option>Silicon</option>
+          <option>Sprays</option><option>Lubricantes</option><option>Abrasivos</option>
+          <option>Herramientas de corte</option><option>Selladores</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Unidad *</label>
+        <select id="m-unidad">
+          <option>pzas</option><option>kg</option><option>L</option><option>rollos</option>
+          <option>cajas</option><option>metros</option><option>pares</option><option>juegos</option>
+        </select>
+      </div>
+      <div class="form-field full"><label>Descripción *</label><input id="m-desc" placeholder="Descripción completa del consumible"></div>
+      <div class="form-field"><label>Stock inicial</label><input id="m-stock" type="number" min="0" placeholder="0"></div>
+      <div class="form-field"><label>Stock seguridad *</label><input id="m-seg" type="number" min="0" placeholder="0"></div>
+      <div class="form-field"><label>Punto de reorden *</label><input id="m-reorden" type="number" min="0" placeholder="0"></div>
+      <div class="form-field"><label>Proveedor</label><input id="m-prov" placeholder="Nombre proveedor"></div>
+      <div class="form-field"><label>Lead time (días)</label><input id="m-lead" type="number" min="1" placeholder="5"></div>
+      <div class="form-field"><label>Costo unitario ($MXN)</label><input id="m-costo" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-cons')">Cancelar</button>
+      <button class="btn-primary" onclick="saveConsumible()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL USUARIO ══════════ -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal">
+    <div class="modal-title" id="modal-user-title">👤 Nuevo usuario</div>
+    <div class="form-grid">
+      <div class="form-field"><label>Nombre de usuario *</label><input id="u-name" placeholder="usuario123"></div>
+      <div class="form-field"><label>Nombre completo</label><input id="u-fullname" placeholder="Juan Pérez"></div>
+      <div class="form-field"><label>Contraseña *</label><input id="u-pass" type="password" placeholder="••••••••"></div>
+      <div class="form-field"><label>Rol *</label>
+        <select id="u-role">
+          <option value="operario">Operario</option>
+          <option value="encargado">Encargado</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('modal-user')">Cancelar</button>
+      <button class="btn-primary" onclick="saveUser()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  DATOS POR DEFECTO
+// ══════════════════════════════════════════════
+const DEFAULT_CONSUMIBLES = [
+  // ── Grapas
+  {id:"CONS-001",desc:"Grapa estándar 1/2\"",cat:"Grapas",unidad:"pzas",stock:12000,seg:3000,reorden:4814,prov:"Grapadoras MX",lead:3,costoUnit:0.017},
+  {id:"CONS-002",desc:"Grapa galvanizada 3/4\"",cat:"Grapas",unidad:"pzas",stock:6000,seg:1500,reorden:1710,prov:"Grapadoras MX",lead:3,costoUnit:0.04},
+  {id:"CONS-003",desc:"Grapa acero inox 5/8\"",cat:"Grapas",unidad:"pzas",stock:800,seg:200,reorden:300,prov:"Grapadoras MX",lead:5,costoUnit:0.09},
+  // ── Pegamentos
+  {id:"CONS-004",desc:"Pegamento blanco PVA",cat:"Pegamentos",unidad:"L",stock:40,seg:10,reorden:13,prov:"QuimiPro",lead:5,costoUnit:95},
+  {id:"CONS-005",desc:"Pegamento hot-melt baja temp",cat:"Pegamentos",unidad:"kg",stock:25,seg:8,reorden:11,prov:"QuimiPro",lead:5,costoUnit:180},
+  {id:"CONS-006",desc:"Adhesivo epoxi bicomponente",cat:"Pegamentos",unidad:"pzas",stock:12,seg:3,reorden:5,prov:"QuimiPro",lead:7,costoUnit:320},
+  // ── Flejes
+  {id:"CONS-007",desc:"Fleje polipropileno 12mm",cat:"Flejes",unidad:"rollos",stock:15,seg:4,reorden:86,prov:"EmpaqCorp",lead:7,costoUnit:0.42},
+  {id:"CONS-008",desc:"Fleje metálico 19mm",cat:"Flejes",unidad:"rollos",stock:8,seg:2,reorden:4,prov:"EmpaqCorp",lead:10,costoUnit:2.80},
+  // ── Tapes
+  {id:"CONS-009",desc:"Tape transparente 2\"",cat:"Tapes",unidad:"rollos",stock:80,seg:20,reorden:297,prov:"SellaMax",lead:4,costoUnit:0.64},
+  {id:"CONS-010",desc:"Tape enmascarar azul",cat:"Tapes",unidad:"rollos",stock:45,seg:10,reorden:45,prov:"SellaMax",lead:4,costoUnit:0.56},
+  {id:"CONS-011",desc:"Tape doble cara 1\"",cat:"Tapes",unidad:"rollos",stock:30,seg:8,reorden:15,prov:"SellaMax",lead:4,costoUnit:1.20},
+  {id:"CONS-012",desc:"Tape tela reforzado",cat:"Tapes",unidad:"rollos",stock:20,seg:5,reorden:10,prov:"SellaMax",lead:4,costoUnit:1.80},
+  // ── Tinta
+  {id:"CONS-013",desc:"Tinta negra impresión",cat:"Tinta",unidad:"L",stock:8,seg:3,reorden:4,prov:"InkMex",lead:10,costoUnit:450},
+  {id:"CONS-014",desc:"Tinta azul etiquetado",cat:"Tinta",unidad:"L",stock:4,seg:1,reorden:2,prov:"InkMex",lead:10,costoUnit:480},
+  // ── Silicon
+  {id:"CONS-015",desc:"Silicon transparente 300ml",cat:"Silicon",unidad:"pzas",stock:50,seg:12,reorden:17,prov:"ConstPro",lead:3,costoUnit:65},
+  {id:"CONS-016",desc:"Silicon negro alta temp",cat:"Silicon",unidad:"pzas",stock:18,seg:5,reorden:8,prov:"ConstPro",lead:3,costoUnit:95},
+  // ── Sprays
+  {id:"CONS-017",desc:"Spray desmoldante 500ml",cat:"Sprays",unidad:"pzas",stock:30,seg:8,reorden:15,prov:"LubriMex",lead:5,costoUnit:120},
+  {id:"CONS-018",desc:"Spray lubricante WD seco",cat:"Sprays",unidad:"pzas",stock:22,seg:6,reorden:10,prov:"LubriMex",lead:5,costoUnit:145},
+  // ── Lubricantes
+  {id:"CONS-019",desc:"Aceite de corte soluble",cat:"Lubricantes",unidad:"L",stock:60,seg:15,reorden:25,prov:"LubriMex",lead:5,costoUnit:85},
+  {id:"CONS-020",desc:"Grasa bloqueo de rodamiento",cat:"Lubricantes",unidad:"kg",stock:10,seg:3,reorden:5,prov:"LubriMex",lead:7,costoUnit:220},
+  // ── Abrasivos
+  {id:"CONS-021",desc:"Lija grano 120 (hoja)",cat:"Abrasivos",unidad:"pzas",stock:200,seg:50,reorden:80,prov:"AbrasivMex",lead:4,costoUnit:8},
+  {id:"CONS-022",desc:"Lija grano 220 (hoja)",cat:"Abrasivos",unidad:"pzas",stock:150,seg:40,reorden:60,prov:"AbrasivMex",lead:4,costoUnit:9},
+  {id:"CONS-023",desc:"Disco desbaste 4.5\"",cat:"Abrasivos",unidad:"pzas",stock:40,seg:10,reorden:20,prov:"AbrasivMex",lead:5,costoUnit:45},
+  // ── Herramientas de corte
+  {id:"CONS-024",desc:"Cutter navaja trapezoidal",cat:"Herramientas de corte",unidad:"pzas",stock:35,seg:10,reorden:15,prov:"ToolMex",lead:3,costoUnit:18},
+  {id:"CONS-025",desc:"Segueta bimetálica 18t",cat:"Herramientas de corte",unidad:"pzas",stock:24,seg:6,reorden:12,prov:"ToolMex",lead:3,costoUnit:55},
+];
+
+const DEFAULT_USERS = [
+  {username:'admin',    fullname:'Administrador',  password:'admin123', role:'admin'},
+  {username:'encargado',fullname:'Carlos Encargado',password:'enc456',  role:'encargado'},
+  {username:'operario1',fullname:'Luis Operario',   password:'op789',   role:'operario'},
+];
+
+// ══════════════════════════════════════════════
+//  PERSISTENCIA localStorage
+// ══════════════════════════════════════════════
+function lsGet(key, def){ try{ const v=localStorage.getItem('tc_'+key); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function lsSet(key, val){ try{ localStorage.setItem('tc_'+key, JSON.stringify(val)); }catch(e){} }
+
+let data   = lsGet('consumibles', DEFAULT_CONSUMIBLES.map(c=>({...c})));
+let log    = lsGet('log', []);
+let users  = lsGet('users', DEFAULT_USERS.map(u=>({...u})));
+let currentUser = null;
+
+function save(){ lsSet('consumibles', data); lsSet('log', log); lsSet('users', users); }
+
+// ══════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════
+function fillLoginSelect(){
+  const sel = document.getElementById('l-user');
+  sel.innerHTML = '<option value="">— Selecciona usuario —</option>';
+  users.forEach(u=>{
+    const o = document.createElement('option');
+    o.value = u.username;
+    o.textContent = `${u.username} (${u.fullname||u.username})`;
+    sel.appendChild(o);
+  });
+}
+
+function doLogin(){
+  const uname = document.getElementById('l-user').value;
+  const pass  = document.getElementById('l-pass').value;
+  const err   = document.getElementById('l-err');
+  const u = users.find(x=>x.username===uname && x.password===pass);
+  if(!u){ err.style.display='block'; return; }
+  err.style.display='none';
+  currentUser = u;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('h-user').textContent = `${u.fullname||u.username} [${u.role}]`;
+  // show admin nav items
+  document.querySelectorAll('.admin-only').forEach(el=>{
+    el.style.display = (u.role==='admin')?'flex':'none';
+  });
+  updateDashboard();
+  updateCharts();
+}
+
+function doLogout(){
+  currentUser = null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('l-pass').value='';
+  document.getElementById('l-user').value='';
+  fillLoginSelect();
+}
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function getStatus(c){
+  if(c.stock <= c.seg) return 'urgent';
+  if(c.stock <= c.reorden) return 'low';
+  return 'ok';
+}
+function statusBadge(c){
+  const s=getStatus(c);
+  if(s==='urgent') return '<span class="badge badge-urgent">URGENTE</span>';
+  if(s==='low')    return '<span class="badge badge-low">BAJO</span>';
+  return '<span class="badge badge-ok">OK</span>';
+}
+function getC(id){ return data.find(c=>c.id===id); }
+function toast(msg, type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`show ${type}`;
+  setTimeout(()=>t.className='', 2800);
+}
+function addLog(tipo, desc, ref=''){
+  const now=new Date();
+  const time=now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const ts=now.getTime();
+  const user=currentUser?currentUser.username:'—';
+  log.unshift({tipo,desc,ref,time,ts,user});
+  save();
+  renderLogs();
+  updateDashboard();
+  updateCharts();
+}
+
+// ══════════════════════════════════════════════
+//  FILL SELECTS
+// ══════════════════════════════════════════════
+function fillSelects(){
+  ['s-cons','e-cons','r-cons'].forEach(id=>{
+    const el=document.getElementById(id);
+    const first=el.options[0];
+    el.innerHTML=''; el.appendChild(first);
+    data.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.id; o.textContent=`${c.id} — ${c.desc}`;
+      el.appendChild(o);
+    });
+  });
+  // stock category filter
+  const catSel=document.getElementById('stock-cat');
+  if(catSel){
+    const cats=[...new Set(data.map(c=>c.cat))].sort();
+    const cur=catSel.value;
+    catSel.innerHTML='<option value="">Todas las categorías</option>';
+    cats.forEach(ct=>{ const o=document.createElement('option'); o.value=ct; o.textContent=ct; catSel.appendChild(o); });
+    catSel.value=cur;
+  }
+}
+
+// ══════════════════════════════════════════════
+//  RENDER STOCK
+// ══════════════════════════════════════════════
+function renderStock(){
+  const search=(document.getElementById('stock-search')?.value||'').toLowerCase();
+  const cat=document.getElementById('stock-cat')?.value||'';
+  const status=document.getElementById('stock-status')?.value||'';
+  let filtered=data.filter(c=>{
+    if(search && !c.id.toLowerCase().includes(search) && !c.desc.toLowerCase().includes(search) && !c.cat.toLowerCase().includes(search)) return false;
+    if(cat && c.cat!==cat) return false;
+    if(status && getStatus(c)!==status) return false;
+    return true;
+  });
+  document.getElementById('stock-body').innerHTML=filtered.map(c=>`
+    <tr>
+      <td class="mono">${c.id}</td>
+      <td>${c.desc}</td>
+      <td><span style="color:var(--text3)">${c.cat}</span></td>
+      <td class="mono"><strong>${c.stock.toLocaleString()}</strong> <span style="color:var(--text3);font-size:11px">${c.unidad}</span></td>
+      <td class="mono" style="color:var(--text3)">${c.seg.toLocaleString()}</td>
+      <td class="mono" style="color:var(--text3)">${c.reorden.toLocaleString()}</td>
+      <td style="color:var(--text2)">${c.prov}</td>
+      <td>${statusBadge(c)}</td>
+    </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════
+//  RENDER INVENTARIO
+// ══════════════════════════════════════════════
+function renderInventario(){
+  document.getElementById('inv-body').innerHTML=data.map((c,i)=>`
+    <tr>
+      <td class="mono">${c.id}</td>
+      <td>${c.desc}</td>
+      <td class="mono" style="color:var(--text3)">${c.unidad}</td>
+      <td class="mono"><strong>${c.stock.toLocaleString()}</strong></td>
+      <td><input type="number" class="inv-input" id="inv-${i}" min="0" placeholder="${c.stock}" oninput="calcDiff(${i})"></td>
+      <td id="diff-${i}" class="diff-zero">—</td>
+    </tr>`).join('');
+}
+function calcDiff(i){
+  const v=parseInt(document.getElementById(`inv-${i}`).value);
+  const el=document.getElementById(`diff-${i}`);
+  if(isNaN(v)){ el.textContent='—'; el.className='diff-zero'; return; }
+  const d=v-data[i].stock;
+  el.textContent=d===0?'—':d>0?'+'+d:d;
+  el.className=d===0?'diff-zero':d>0?'diff-pos':'diff-neg';
+}
+function saveInventario(){
+  let changes=0;
+  data.forEach((c,i)=>{
+    const v=parseInt(document.getElementById(`inv-${i}`)?.value);
+    if(!isNaN(v) && v!==c.stock){
+      const d=v-c.stock;
+      addLog('CNT',`${c.desc}: ${c.stock}→${v} ${c.unidad} (${d>0?'+'+d:d})`,`Conteo físico`);
+      c.stock=v; changes++;
+    }
+  });
+  if(!changes){ toast('Sin diferencias encontradas'); return; }
+  save(); fillSelects(); renderStock(); renderInventario();
+  toast(`Conteo guardado: ${changes} cambio${changes>1?'s':''}`);
+}
+
+// ══════════════════════════════════════════════
+//  SALIDA
+// ══════════════════════════════════════════════
+function doSalida(){
+  const op=document.getElementById('s-op').value.trim();
+  const linea=document.getElementById('s-linea').value;
+  const cid=document.getElementById('s-cons').value;
+  const qty=parseInt(document.getElementById('s-qty').value);
+  const ot=document.getElementById('s-ot').value.trim();
+  if(!op||!linea||!cid||!qty||qty<=0){ toast('Completa los campos requeridos','err'); return; }
+  const c=getC(cid);
+  if(qty>c.stock){ toast(`Stock insuficiente: ${c.stock} ${c.unidad} disponibles`,'err'); return; }
+  c.stock-=qty;
+  addLog('SAL',`${qty} ${c.unidad} de ${c.desc} → ${op} (${linea})`,ot||'');
+  fillSelects(); renderStock();
+  const after=c.stock;
+  const warn=after<=c.seg?' ⚠ QUEDÓ BAJO SEGURIDAD':'';
+  toast(`Salida registrada${warn}`);
+  clearSalida();
+}
+function clearSalida(){
+  ['s-op','s-qty','s-ot'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('s-cons').value='';
+  document.getElementById('s-linea').value='';
+  document.getElementById('s-info').style.display='none';
+}
+
+// ══════════════════════════════════════════════
+//  ENTRADA
+// ══════════════════════════════════════════════
+function doEntrada(){
+  const prov=document.getElementById('e-prov').value.trim();
+  const rem=document.getElementById('e-rem').value.trim();
+  const cid=document.getElementById('e-cons').value;
+  const qty=parseInt(document.getElementById('e-qty').value);
+  const obs=document.getElementById('e-obs').value.trim();
+  if(!prov||!cid||!qty||qty<=0){ toast('Completa los campos requeridos','err'); return; }
+  const c=getC(cid);
+  c.stock+=qty;
+  addLog('ENT',`+${qty} ${c.unidad} de ${c.desc} | ${prov}`,rem+(obs?' | '+obs:''));
+  fillSelects(); renderStock();
+  toast(`Entrada registrada: +${qty} ${c.unidad}`);
+  clearEntrada();
+}
+function clearEntrada(){
+  ['e-prov','e-rem','e-qty','e-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('e-cons').value='';
+}
+
+// ══════════════════════════════════════════════
+//  REPORTE
+// ══════════════════════════════════════════════
+function doReporte(){
+  const tipo=document.getElementById('r-tipo').value;
+  const prio=document.getElementById('r-prio').value;
+  const cid=document.getElementById('r-cons').value;
+  const nombre=document.getElementById('r-nombre').value.trim();
+  const desc=document.getElementById('r-desc').value.trim();
+  if(!nombre||!desc){ toast('Escribe tu nombre y la descripción','err'); return; }
+  const cname=cid?(getC(cid)?.desc||'N/A'):'N/A';
+  const now=new Date().toLocaleString('es-MX');
+  const txt=`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REPORTE TOOL CRIB → INGENIERÍA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Fecha/Hora : ${now}
+Reporta    : ${nombre}
+Usuario    : ${currentUser?.username||'—'}
+Tipo       : ${tipo}
+Prioridad  : ${prio}
+Consumible : ${cname}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DESCRIPCIÓN:
+${desc}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  document.getElementById('r-box').textContent=txt;
+  document.getElementById('r-preview').style.display='block';
+  addLog('REP',`${tipo} (${prio}) — ${nombre}`,desc.substring(0,50)+'...');
+  toast('Reporte generado — cópialo y envíalo a ingeniería');
+}
+function copyReport(){
+  navigator.clipboard.writeText(document.getElementById('r-box').textContent).then(()=>toast('Copiado al portapapeles'));
+}
+function clearReporte(){
+  ['r-nombre','r-desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('r-cons').value='';
+  document.getElementById('r-preview').style.display='none';
+}
+
+// ══════════════════════════════════════════════
+//  CATÁLOGO (Admin)
+// ══════════════════════════════════════════════
+let editingConsId = null;
+
+function checkAdminAccess(panelId, contentId, checkId){
+  const content=document.getElementById(contentId);
+  const check=document.getElementById(checkId);
+  if(!currentUser||currentUser.role!=='admin'){
+    content.style.display='none';
+    check.innerHTML=`<div class="access-denied"><div class="icon">🔒</div>Acceso restringido a administradores</div>`;
+  } else {
+    content.style.display='block';
+    check.innerHTML='';
+  }
+}
+
+function renderCatalogo(){
+  checkAdminAccess('p-catalogo','cat-content','cat-access-check');
+  if(!currentUser||currentUser.role!=='admin') return;
+  document.getElementById('cat-body').innerHTML=data.map(c=>`
+    <tr>
+      <td class="mono">${c.id}</td>
+      <td>${c.desc}</td>
+      <td style="color:var(--text3)">${c.cat}</td>
+      <td class="mono">${c.unidad}</td>
+      <td class="mono"><strong>${c.stock.toLocaleString()}</strong></td>
+      <td class="mono">${c.seg.toLocaleString()}</td>
+      <td class="mono">${c.reorden.toLocaleString()}</td>
+      <td style="color:var(--text2)">${c.prov}</td>
+      <td class="mono">${c.lead}d</td>
+      <td class="mono">$${c.costoUnit}</td>
+      <td style="display:flex;gap:6px;padding:6px 12px">
+        <button class="btn-edit btn-sm" onclick="openModalEdit('${c.id}')">Editar</button>
+        <button class="btn-del btn-sm" onclick="deleteConsumible('${c.id}')">Eliminar</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openModalNew(){
+  editingConsId=null;
+  document.getElementById('modal-cons-title').textContent='➕ Nuevo consumible';
+  ['m-id','m-desc','m-stock','m-seg','m-reorden','m-prov','m-lead','m-costo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-cat').value='Grapas';
+  document.getElementById('m-unidad').value='pzas';
+  openModal('modal-cons');
+}
+
+function openModalEdit(id){
+  const c=getC(id);
+  if(!c) return;
+  editingConsId=id;
+  document.getElementById('modal-cons-title').textContent='✏️ Editar consumible';
+  document.getElementById('m-id').value=c.id;
+  document.getElementById('m-id').disabled=true;
+  document.getElementById('m-desc').value=c.desc;
+  document.getElementById('m-cat').value=c.cat;
+  document.getElementById('m-unidad').value=c.unidad;
+  document.getElementById('m-stock').value=c.stock;
+  document.getElementById('m-seg').value=c.seg;
+  document.getElementById('m-reorden').value=c.reorden;
+  document.getElementById('m-prov').value=c.prov;
+  document.getElementById('m-lead').value=c.lead;
+  document.getElementById('m-costo').value=c.costoUnit;
+  openModal('modal-cons');
+}
+
+function saveConsumible(){
+  const id=document.getElementById('m-id').value.trim().toUpperCase();
+  const desc=document.getElementById('m-desc').value.trim();
+  const cat=document.getElementById('m-cat').value;
+  const unidad=document.getElementById('m-unidad').value;
+  const stock=parseInt(document.getElementById('m-stock').value)||0;
+  const seg=parseInt(document.getElementById('m-seg').value)||0;
+  const reorden=parseInt(document.getElementById('m-reorden').value)||0;
+  const prov=document.getElementById('m-prov').value.trim()||'—';
+  const lead=parseInt(document.getElementById('m-lead').value)||5;
+  const costoUnit=parseFloat(document.getElementById('m-costo').value)||0;
+  if(!id||!desc){ toast('ID y descripción son requeridos','err'); return; }
+  if(editingConsId){
+    const c=getC(editingConsId);
+    Object.assign(c,{desc,cat,unidad,seg,reorden,prov,lead,costoUnit});
+    toast(`Consumible ${id} actualizado`);
+  } else {
+    if(getC(id)){ toast('Ese N° de parte ya existe','err'); return; }
+    data.push({id,desc,cat,unidad,stock,seg,reorden,prov,lead,costoUnit});
+    toast(`Consumible ${id} agregado`);
+  }
+  document.getElementById('m-id').disabled=false;
+  save(); fillSelects(); renderCatalogo(); renderStock(); updateDashboard(); updateCharts();
+  closeModal('modal-cons');
+}
+
+function deleteConsumible(id){
+  if(!confirm(`¿Eliminar ${id}? Esta acción no se puede deshacer.`)) return;
+  data=data.filter(c=>c.id!==id);
+  save(); fillSelects(); renderCatalogo(); renderStock(); updateDashboard(); updateCharts();
+  toast(`${id} eliminado`);
+}
+
+// ══════════════════════════════════════════════
+//  USUARIOS (Admin)
+// ══════════════════════════════════════════════
+let editingUserId = null;
+
+function renderUsuarios(){
+  checkAdminAccess('p-usuarios','usr-content','usr-access-check');
+  if(!currentUser||currentUser.role!=='admin') return;
+  const roleLabel={admin:'Administrador',encargado:'Encargado',operario:'Operario'};
+  const roleCls={admin:'role-admin',encargado:'role-encargado',operario:'role-operario'};
+  document.getElementById('users-list').innerHTML=`<div class="users-grid">`+
+    users.map(u=>`
+      <div class="user-row">
+        <div>
+          <div class="user-name">${u.fullname||u.username}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text3)">@${u.username}</div>
+        </div>
+        <span class="badge user-role-badge ${roleCls[u.role]||''}">${roleLabel[u.role]||u.role}</span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn-edit btn-sm" onclick="openModalUserEdit('${u.username}')">Editar</button>
+          ${u.username!==currentUser?.username?`<button class="btn-del btn-sm" onclick="deleteUser('${u.username}')">Eliminar</button>`:''}
+        </div>
+      </div>`).join('')+`</div>`;
+}
+
+function openModalUser(){
+  editingUserId=null;
+  document.getElementById('modal-user-title').textContent='👤 Nuevo usuario';
+  ['u-name','u-fullname','u-pass'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('u-role').value='operario';
+  document.getElementById('u-name').disabled=false;
+  openModal('modal-user');
+}
+
+function openModalUserEdit(username){
+  const u=users.find(x=>x.username===username);
+  if(!u) return;
+  editingUserId=username;
+  document.getElementById('modal-user-title').textContent='✏️ Editar usuario';
+  document.getElementById('u-name').value=u.username;
+  document.getElementById('u-name').disabled=true;
+  document.getElementById('u-fullname').value=u.fullname||'';
+  document.getElementById('u-pass').value=u.password;
+  document.getElementById('u-role').value=u.role;
+  openModal('modal-user');
+}
+
+function saveUser(){
+  const username=document.getElementById('u-name').value.trim().toLowerCase();
+  const fullname=document.getElementById('u-fullname').value.trim();
+  const password=document.getElementById('u-pass').value;
+  const role=document.getElementById('u-role').value;
+  if(!username||!password){ toast('Usuario y contraseña requeridos','err'); return; }
+  if(editingUserId){
+    const u=users.find(x=>x.username===editingUserId);
+    Object.assign(u,{fullname,password,role});
+    toast(`Usuario ${username} actualizado`);
+  } else {
+    if(users.find(x=>x.username===username)){ toast('Ese usuario ya existe','err'); return; }
+    users.push({username,fullname,password,role});
+    toast(`Usuario ${username} creado`);
+  }
+  document.getElementById('u-name').disabled=false;
+  save(); renderUsuarios(); fillLoginSelect();
+  closeModal('modal-user');
+}
+
+function deleteUser(username){
+  if(!confirm(`¿Eliminar usuario ${username}?`)) return;
+  users=users.filter(u=>u.username!==username);
+  save(); renderUsuarios(); fillLoginSelect();
+  toast(`Usuario ${username} eliminado`);
+}
+
+// ══════════════════════════════════════════════
+//  LOGS
+// ══════════════════════════════════════════════
+function renderLogs(container='hist-body', limit=999){
+  const el=document.getElementById(container);
+  if(!el) return;
+  const tipoFilter=container==='hist-body'?(document.getElementById('hist-tipo')?.value||''):'';
+  const items=log.filter(l=>!tipoFilter||l.tipo===tipoFilter).slice(0,limit);
+  if(!items.length){ el.innerHTML='<div style="color:var(--text3);padding:16px 0;font-size:13px">Sin movimientos registrados.</div>'; return; }
+  el.innerHTML=items.map(l=>{
+    const bc=l.tipo==='SAL'?'badge-sal':l.tipo==='ENT'?'badge-ent':l.tipo==='CNT'?'badge-cnt':'badge-rep';
+    return `<div class="log-row">
+      <span class="log-time">${l.time}</span>
+      <span class="badge ${bc}" style="margin-top:1px;min-width:36px;text-align:center">${l.tipo}</span>
+      <span class="log-user">@${l.user||'—'}</span>
+      <span class="log-body"><strong>${l.desc}</strong>${l.ref?' — '+l.ref:''}</span>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════
+function updateDashboard(){
+  const urgent=data.filter(c=>getStatus(c)==='urgent').length;
+  const low=data.filter(c=>getStatus(c)==='low').length;
+  const totalMov=log.length;
+  const valorTotal=data.reduce((s,c)=>s+c.stock*c.costoUnit,0);
+  document.getElementById('kpi-grid').innerHTML=`
+    <div class="kpi ${urgent>0?'red':'green'}">
+      <div class="kpi-label">Urgentes</div>
+      <div class="kpi-val">${urgent}</div>
+      <div class="kpi-sub">consumibles críticos</div>
+    </div>
+    <div class="kpi ${low>0?'amber':''}">
+      <div class="kpi-label">Stock bajo</div>
+      <div class="kpi-val">${low}</div>
+      <div class="kpi-sub">por debajo de reorden</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Movimientos totales</div>
+      <div class="kpi-val">${totalMov}</div>
+      <div class="kpi-sub">entradas + salidas</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Valor inventario</div>
+      <div class="kpi-val" style="font-size:18px">$${valorTotal.toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+      <div class="kpi-sub">costo estimado MXN</div>
+    </div>`;
+  const urgItems=data.filter(c=>getStatus(c)==='urgent');
+  const lowItems=data.filter(c=>getStatus(c)==='low');
+  let html='';
+  urgItems.forEach(c=>{ html+=`<div class="alert-banner danger"><span>⛔</span><span><strong>${c.id} — ${c.desc}</strong>: stock ${c.stock} ${c.unidad} (seguridad: ${c.seg}). Pedir a ${c.prov}, lead time ${c.lead} días.</span></div>`; });
+  lowItems.forEach(c=>{ html+=`<div class="alert-banner warn"><span>⚠</span><span><strong>${c.id} — ${c.desc}</strong>: stock ${c.stock} ${c.unidad} — por debajo del punto de reorden (${c.reorden}).</span></div>`; });
+  if(!html) html='<div class="alert-banner info"><span>✓</span><span>Todos los consumibles están en niveles normales.</span></div>';
+  document.getElementById('dash-alerts').innerHTML=html;
+  const u=urgent;
+  const ok=data.filter(c=>getStatus(c)==='ok').length;
+  document.getElementById('h-urgent').textContent=`${u} urgente${u!==1?'s':''}`;
+  document.getElementById('h-ok').textContent=`${ok} OK`;
+  renderLogs('dash-log',5);
+}
+
+// ══════════════════════════════════════════════
+//  CHARTS
+// ══════════════════════════════════════════════
+let chartMov=null, chartCat=null;
+
+function updateCharts(){
+  updateChartMov();
+  updateChartCat();
+}
+
+function updateChartMov(){
+  const ctx=document.getElementById('chart-mov');
+  if(!ctx) return;
+  const days=7;
+  const labels=[];
+  const salidas=[], entradas=[];
+  for(let i=days-1;i>=0;i--){
+    const d=new Date();
+    d.setDate(d.getDate()-i);
+    const label=d.toLocaleDateString('es-MX',{weekday:'short',day:'numeric'});
+    labels.push(label);
+    const start=new Date(d); start.setHours(0,0,0,0);
+    const end=new Date(d); end.setHours(23,59,59,999);
+    salidas.push(log.filter(l=>l.tipo==='SAL'&&l.ts>=start.getTime()&&l.ts<=end.getTime()).length);
+    entradas.push(log.filter(l=>l.tipo==='ENT'&&l.ts>=start.getTime()&&l.ts<=end.getTime()).length);
+  }
+  if(chartMov) chartMov.destroy();
+  chartMov=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Salidas',data:salidas,backgroundColor:'rgba(231,76,60,0.7)',borderColor:'#e74c3c',borderWidth:1},
+        {label:'Entradas',data:entradas,backgroundColor:'rgba(46,204,113,0.7)',borderColor:'#2ecc71',borderWidth:1}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8a95a8',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'#556070',font:{size:10}},grid:{color:'#2a3040'}},
+        y:{ticks:{color:'#556070',font:{size:10}},grid:{color:'#2a3040'},beginAtZero:true,stepSize:1}
+      }
+    }
+  });
+}
+
+function updateChartCat(){
+  const ctx=document.getElementById('chart-cat');
+  if(!ctx) return;
+  const cats={};
+  data.forEach(c=>{ cats[c.cat]=(cats[c.cat]||0)+c.stock*c.costoUnit; });
+  const labels=Object.keys(cats);
+  const values=Object.values(cats);
+  const colors=['#3d8ef0','#2ecc71','#f5a623','#e74c3c','#9b59b6','#1abc9c','#e67e22','#e91e8c','#00bcd4','#8bc34a','#ff5722','#607d8b'];
+  if(chartCat) chartCat.destroy();
+  chartCat=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels,datasets:[{data:values,backgroundColor:colors.slice(0,labels.length),borderColor:'#13171d',borderWidth:2}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{color:'#8a95a8',font:{size:10},boxWidth:10,padding:6}}}
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  EXPORTS
+// ══════════════════════════════════════════════
+function exportCSV(){
+  const rows=[['N° Parte','Descripción','Categoría','Unidad','Stock','Seg.','Reorden','Proveedor','Lead','CostoUnit','Status']];
+  data.forEach(c=>rows.push([c.id,c.desc,c.cat,c.unidad,c.stock,c.seg,c.reorden,c.prov,c.lead,c.costoUnit,getStatus(c)]));
+  download('stock_'+new Date().toISOString().slice(0,10)+'.csv',rows.map(r=>r.join(',')).join('\n'));
+}
+function exportLog(){
+  if(!log.length){ toast('Sin movimientos para exportar','err'); return; }
+  const rows=[['Hora','Usuario','Tipo','Descripción','Referencia']];
+  log.forEach(l=>rows.push([l.time,l.user||'',l.tipo,l.desc,l.ref]));
+  download('movimientos_'+new Date().toISOString().slice(0,10)+'.csv',rows.map(r=>r.join(',')).join('\n'));
+}
+function download(name,content){
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF'+content);
+  a.download=name; a.click();
+  toast(`Descargado: ${name}`);
+}
+
+// ══════════════════════════════════════════════
+//  MODAL HELPERS
+// ══════════════════════════════════════════════
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+// close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el=>{
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('open'); });
+});
+
+// ══════════════════════════════════════════════
+//  STOCK CHECK (salida)
+// ══════════════════════════════════════════════
+function checkStock(){
+  const id=document.getElementById('s-cons').value;
+  const qty=parseInt(document.getElementById('s-qty').value)||0;
+  const box=document.getElementById('s-info');
+  if(!id){ box.style.display='none'; return; }
+  const c=getC(id);
+  const after=c.stock-qty;
+  let cls='ok', msg='';
+  if(qty>c.stock){ cls='danger'; msg=`⚠ Sin stock suficiente. Disponible: ${c.stock} ${c.unidad}`; }
+  else if(after<=c.seg){ cls='warn'; msg=`Stock actual: ${c.stock} ${c.unidad}  →  Después: ${after} ${c.unidad}  ⚠ Quedará bajo seguridad (${c.seg})`; }
+  else { msg=`Stock actual: ${c.stock} ${c.unidad}  →  Después: ${after} ${c.unidad}  ✓ OK`; }
+  box.className=`stock-box ${cls}`; box.textContent=msg; box.style.display='block';
+}
+
+// ══════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════
+function nav(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('p-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='stock'){ fillSelects(); renderStock(); }
+  if(id==='inventario') renderInventario();
+  if(id==='historial') renderLogs('hist-body');
+  if(id==='catalogo') renderCatalogo();
+  if(id==='usuarios') renderUsuarios();
+}
+
+// ══════════════════════════════════════════════
+//  CLOCK
+// ══════════════════════════════════════════════
+function updateClock(){ document.getElementById('h-time').textContent=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+setInterval(updateClock,1000); updateClock();
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+fillLoginSelect();
+fillSelects();
+</script>
+</body>
+</html>
